@@ -30,4 +30,11 @@ class NotificationViewModel {
       id: 3,
     );
   }
+  Future<void> showCronometroAtivoComTempo(String elapsedTime) async {
+    await _notificationService.showNotification(
+      title: 'Cronômetro em andamento',
+      body: 'Tempo decorrido: $elapsedTime',
+      id: 1,
+    );
+  }
 }

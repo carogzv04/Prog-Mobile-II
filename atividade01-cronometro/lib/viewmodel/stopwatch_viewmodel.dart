@@ -1,15 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'notification_viewmodel.dart';
 
 class StopwatchViewModel extends ChangeNotifier {
   late Stopwatch _stopwatch;
   Timer? _timer;
+  Timer? _pauseTimer;
+  Timer? _backgroundTimer;
 
   String _elapsedTime = '00:00.00';
   List<Map<String, String>> _laps = [];
 
+  final NotificationViewModel _notificationViewModel = NotificationViewModel();
+
   StopwatchViewModel() {
     _stopwatch = Stopwatch();
+    _notificationViewModel.initialize();
   }
 
   String get elapsedTime {
@@ -38,20 +44,33 @@ class StopwatchViewModel extends ChangeNotifier {
     _stopwatch.start();
     _timer = Timer.periodic(
       Duration(milliseconds: 30),
-      (_) => _updateTime(),
+          (_) => _updateTime(),
     );
+    _pauseTimer?.cancel();
+    _notificationViewModel.showCronometroAtivo();
+    startUpdatingNotification();
     notifyListeners();
   }
 
   void pause() {
     _stopwatch.stop();
     _timer?.cancel();
+
+    _pauseTimer = Timer(Duration(seconds: 10), () {
+      if (!_stopwatch.isRunning) {
+        _notificationViewModel.showCronometroInativo();
+      }
+    });
+
+    _backgroundTimer?.cancel();
     notifyListeners();
   }
 
   void reset() {
     _stopwatch.reset();
     _timer?.cancel();
+    _pauseTimer?.cancel();
+    _backgroundTimer?.cancel();
     _laps.clear();
     _elapsedTime = '00:00.00';
     notifyListeners();
@@ -81,6 +100,26 @@ class StopwatchViewModel extends ChangeNotifier {
       'total': current,
     });
 
+    _notificationViewModel.showVoltaRegistrada(
+      lapTime: lapTime,
+      totalTime: current,
+    );
+
     notifyListeners();
+  }
+
+  void startUpdatingNotification() {
+    _backgroundTimer?.cancel();
+    _backgroundTimer = Timer.periodic(Duration(seconds: 1), (_) {
+      if (_stopwatch.isRunning) {
+        _notificationViewModel.showCronometroAtivoComTempo(elapsedTime);
+      } else {
+        _backgroundTimer?.cancel();
+      }
+    });
+  }
+
+  void stopUpdatingNotification() {
+    _backgroundTimer?.cancel();
   }
 }
